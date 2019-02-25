@@ -40,7 +40,7 @@
   ],
   "start_url": "/index.html",
   "scope": ".",
-  "standalone": "standalone",
+  "display": "standalone",
   "orientation": "portrait",
   "background_color": "#fff",
   "theme_color": "#3f51b5",
