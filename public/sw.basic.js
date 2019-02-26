@@ -1,5 +1,5 @@
 // Bump these version numbers each time code for a cache is updated
-const STATIC_VERSION = 'v7';
+const STATIC_VERSION = 'v8';
 const DYNAMIC_VERSION = 'v7';
 
 self.addEventListener('install', event => {
