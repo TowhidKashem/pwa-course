@@ -1,3 +1,4 @@
+// Bump these version numbers each time code for a cache is updated
 const STATIC_VERSION = 'v7';
 const DYNAMIC_VERSION = 'v7';
 
@@ -69,14 +70,14 @@ self.addEventListener('fetch', event => {
         return fetch(event.request)
           .then(response => {
             return caches.open(`dynamic-${DYNAMIC_VERSION}`).then(cache => {
-              // After fetching store in cache
-              // .put() unlike .add() doesn't make a new request, it simply adds what you already have to the cache
-              // Must use .clone(), response is empty because they can only be used once so you must return a copy
+              // After fetching, store in cache
+              // .put() unlike .add() doesn't make a new request, it simply adds what you already fetched to the cache
+              // Must use .clone() here because response is empty since it can only be used once, so you must return a cloned copy
               cache.put(event.request.url, response.clone());
               return response;
             });
           })
-          .catch(err => {});
+          .catch(err => console.error(err));
       }
     })
   );
