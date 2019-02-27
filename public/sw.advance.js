@@ -1,6 +1,9 @@
+importScripts('/src/js/idb.js');
+importScripts('/src/js/db-setup.js');
+
 // Bump these version numbers each time code for a cache is updated
-const STATIC_VERSION = 'v6';
-const DYNAMIC_VERSION = 'v6';
+const STATIC_VERSION = 'v1';
+const DYNAMIC_VERSION = 'v1';
 
 // Recursive helper function to delete items off the cache (off the top - oldest items first, you can get as fancy with this algorithm as you ike) if they are greater than a max amount
 // On this file we are setting a maxItems count of 3 which is of course very agressive, checkout current browser limits to determine a better number
@@ -32,6 +35,7 @@ self.addEventListener('install', event => {
         '/src/js/app.js',
         '/src/js/feed.js',
         '/src/js/material.min.js',
+        '/src/js/idb.js',
         // CSS
         '/src/css/app.css',
         '/src/css/feed.css',
@@ -70,91 +74,100 @@ self.addEventListener('activate', event => {
   return self.clients.claim();
 });
 
-// Name: Catch With Network Fallback Strategy
-// Intercept all fetch requests (this will get triggered not just for fetch API calls from JS but also all images, CSS, JS, etc loaded from HTML)
-self.addEventListener('fetch', event => {
-  // console.log('[SW] Fetching Something...', event);
-
-  event.respondWith(
-    caches.match(event.request).then(response => {
-      // If resource exists in cache return cached version
-      if (response) {
-        return response;
-      }
-      // Otherwise fetch it from the network as usual
-      else {
-        return (
-          fetch(event.request)
-            .then(response => {
-              return caches.open(`dynamic-${DYNAMIC_VERSION}`).then(cache => {
-                // Make sure there aren't too many items in the dynamic cache
-                // _trimCache(`dynamic-${DYNAMIC_VERSION}`, 3);
-
-                // After fetching, store in cache
-                // .put() unlike .add() doesn't make a new request, it simply adds what you already fetched to the cache
-                // Must use .clone() here because response is empty since it can only be used once, so you must return a cloned copy
-                cache.put(event.request.url, response.clone());
-                return response;
-              });
-            })
-            // Show offline message for assets which hasn't been dynamically cached yet but which the user has tried to visit while offline
-            .catch(err => {
-              return caches.open(`static-${STATIC_VERSION}`).then(cache => {
-                // Check to see if the asset being requested is one of the page routes because it doesn't make sense to send offline message for things like
-                // unfetched css and js files, etc
-                if (event.request.headers.get('accept').includes('text/html')) {
-                  return cache.match('/offline.html');
-                }
-              });
-            })
-        );
-      }
-    })
-  );
-});
-
-// // Name: Cache then Network Strategy
-// // Display items from the cache as soon as possible, then reach out to the network and update with newer content (if available)
-// // Gives the illusion of instantaneous load, doesn't work in offline mode
-// // See `feed.js` for the 1st part of the implementation, and below for the 2nd caching the result after fetching part
+// // Name: Catch With Network Fallback Strategy
+// // Intercept all fetch requests (this will get triggered not just for fetch API calls from JS but also all images, CSS, JS, etc loaded from HTML)
 // self.addEventListener('fetch', event => {
-//   const url = 'https://httpbin.org/get';
+//   // console.log('[SW] Fetching Something...', event);
 
-//   // Use cache then network strategy only for the above url
-//   if (event.request.url.indexOf(url) > -1) {
-//     event.respondWith(
-//       caches.open(`dynamic-${DYNAMIC_VERSION}`).then(cache => {
-//         return fetch(event.request).then(response => {
-//           cache.put(event.request, response.clone());
-//           return response;
-//         });
-//       })
-//     );
-//   }
-//   // Use catch with network fallback strategy for everything else
-//   else {
-//     event.respondWith(
-//       caches.match(event.request).then(response => {
-//         if (response) {
-//           return response;
-//         } else {
-//           return fetch(event.request)
+//   event.respondWith(
+//     caches.match(event.request).then(response => {
+//       // If resource exists in cache return cached version
+//       if (response) {
+//         return response;
+//       }
+//       // Otherwise fetch it from the network as usual
+//       else {
+//         return (
+//           fetch(event.request)
 //             .then(response => {
 //               return caches.open(`dynamic-${DYNAMIC_VERSION}`).then(cache => {
+//                 // Make sure there aren't too many items in the dynamic cache
+//                 // _trimCache(`dynamic-${DYNAMIC_VERSION}`, 3);
+
+//                 // After fetching, store in cache
+//                 // .put() unlike .add() doesn't make a new request, it simply adds what you already fetched to the cache
+//                 // Must use .clone() here because response is empty since it can only be used once, so you must return a cloned copy
 //                 cache.put(event.request.url, response.clone());
 //                 return response;
 //               });
 //             })
+//             // Show offline message for assets which hasn't been dynamically cached yet but which the user has tried to visit while offline
 //             .catch(err => {
 //               return caches.open(`static-${STATIC_VERSION}`).then(cache => {
-//                 return cache.match('/offline.html');
+//                 // Check to see if the asset being requested is one of the page routes because it doesn't make sense to send offline message for things like
+//                 // unfetched css and js files, etc
+//                 if (event.request.headers.get('accept').includes('text/html')) {
+//                   return cache.match('/offline.html');
+//                 }
 //               });
-//             });
-//         }
-//       })
-//     );
-//   }
+//             })
+//         );
+//       }
+//     })
+//   );
 // });
+
+// Name: Cache then Network Strategy
+// Display items from the cache as soon as possible, then reach out to the network and update with newer content (if available)
+// Gives the illusion of instantaneous load, doesn't work in offline mode
+// See `feed.js` for the 1st part of the implementation, and below for the 2nd caching the result after fetching part
+self.addEventListener('fetch', event => {
+  const url = 'https://pwagram-ec297.firebaseio.com/posts';
+
+  // Use cache then network strategy only for the above url
+  if (event.request.url.indexOf(url) > -1) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        const clonedResponse = response.clone();
+
+        // Clear db table of all past data
+        deleteAllData('posts').then(() => {
+          // Write new data to table
+          clonedResponse.json().then(data => {
+            for (let key in data) {
+              writeData('posts', data[key]);
+            }
+          });
+        });
+
+        return response;
+      })
+    );
+  }
+  // Use catch with network fallback strategy for everything else
+  else {
+    event.respondWith(
+      caches.match(event.request).then(response => {
+        if (response) {
+          return response;
+        } else {
+          return fetch(event.request)
+            .then(response => {
+              return caches.open(`dynamic-${DYNAMIC_VERSION}`).then(cache => {
+                cache.put(event.request.url, response.clone());
+                return response;
+              });
+            })
+            .catch(err => {
+              return caches.open(`static-${STATIC_VERSION}`).then(cache => {
+                return cache.match('/offline.html');
+              });
+            });
+        }
+      })
+    );
+  }
+});
 
 // // Name: Catch only Strategy
 // self.addEventListener('fetch', event => {

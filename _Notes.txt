@@ -1,0 +1,12 @@
+IndexDB:
+
+  - Key value pair transactional database
+    - If it's a file store in cache
+    - If it's dynamic data store in IndexDB
+    - Transactional means if one field of a DB update operation fails to write then the whole query fails to maintain DB integrity
+
+  - Is async (things like local and session storage are syncronous) therefore it can be used in servie workers, local and session storage cannot
+
+  - Can have multiple databases but it's typical to have one per app with as many tables as needed
+
+  - Wide browser support

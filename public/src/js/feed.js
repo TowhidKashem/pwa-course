@@ -49,23 +49,29 @@ function onSaveButtonClick(e) {
   }
 }
 
-function createCard() {
+function clearCards() {
+  while (sharedMomentsArea.hasChildNodes()) {
+    sharedMomentsArea.removeChild(sharedMomentsArea.lastChild);
+  }
+}
+
+function createCard(post) {
   var cardWrapper = document.createElement('div');
   cardWrapper.className = 'shared-moment-card mdl-card mdl-shadow--2dp';
   var cardTitle = document.createElement('div');
   cardTitle.className = 'mdl-card__title';
-  cardTitle.style.backgroundImage = 'url("/src/images/sf-boat.jpg")';
+  cardTitle.style.backgroundImage = `url(${post.image})`;
   cardTitle.style.backgroundSize = 'cover';
   cardTitle.style.height = '180px';
   cardWrapper.appendChild(cardTitle);
   var cardTitleTextElement = document.createElement('h2');
   cardTitleTextElement.className = 'mdl-card__title-text';
   cardTitleTextElement.style.color = '#fff';
-  cardTitleTextElement.textContent = 'San Francisco Trip';
+  cardTitleTextElement.textContent = post.title;
   cardTitle.appendChild(cardTitleTextElement);
   var cardSupportingText = document.createElement('div');
   cardSupportingText.className = 'mdl-card__supporting-text';
-  cardSupportingText.textContent = 'In San Francisco';
+  cardSupportingText.textContent = post.location;
   cardSupportingText.style.textAlign = 'center';
   // var cardSaveButton = document.createElement('button');
   // cardSaveButton.textContent = 'Save';
@@ -73,36 +79,53 @@ function createCard() {
   // cardSupportingText.appendChild(cardSaveButton);
   cardWrapper.appendChild(cardSupportingText);
   componentHandler.upgradeElement(cardWrapper);
-  sharedMomentsArea.innerHTML = '';
   sharedMomentsArea.appendChild(cardWrapper);
 }
 
 // Name: Cache then Network Strategy
-const url = 'https://httpbin.org/get';
+const url = 'https://pwagram-ec297.firebaseio.com/posts.json';
 let networkDataRecieved = false; // Flag to make sure cache never replaces network data in case the network is faster than the cache
 
 // Fetch from network
 fetch(url)
   .then(res => res.json())
-  .then(data => {
-    console.log('From Network Data');
+  .then(posts => {
+    console.warn('From Network:', posts);
+
     networkDataRecieved = true;
-    createCard();
+
+    clearCards();
+    for (let key in posts) {
+      createCard(posts[key]);
+    }
   });
 
-// Fetch from cache
-if ('caches' in window) {
-  caches
-    .match(url)
-    .then(response => {
-      if (response) {
-        return response.json();
+// Fetch from indexedDB cache
+if ('indexedDB' in window) {
+  readData('posts').then(posts => {
+    if (!networkDataRecieved) {
+      console.warn('From IndexedDB Cache:', posts);
+
+      clearCards();
+      for (let key in posts) {
+        createCard(posts[key]);
       }
-    })
-    .then(data => {
-      if (!networkDataRecieved) {
-        console.log('From Cache Data');
-        createCard();
-      }
-    });
+    }
+  });
+  // caches
+  //   .match(url)
+  //   .then(response => {
+  //     if (response) {
+  //       return response.json();
+  //     }
+  //   })
+  //   .then(posts => {
+  //     if (!networkDataRecieved) {
+  //       console.log('From Cache:', posts);
+
+  //       for (let i in posts) {
+  //         createCard(posts[i]);
+  //       }
+  //     }
+  //   });
 }
