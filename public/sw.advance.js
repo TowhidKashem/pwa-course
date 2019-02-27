@@ -74,7 +74,7 @@ self.addEventListener('activate', event => {
   return self.clients.claim();
 });
 
-// // Name: Catch With Network Fallback Strategy
+// // Name: Catch With Network Fallback Strategy (ideal for caching static items like js/css)
 // // Intercept all fetch requests (this will get triggered not just for fetch API calls from JS but also all images, CSS, JS, etc loaded from HTML)
 // self.addEventListener('fetch', event => {
 //   // console.log('[SW] Fetching Something...', event);
@@ -117,7 +117,7 @@ self.addEventListener('activate', event => {
 //   );
 // });
 
-// Name: Cache then Network Strategy
+// Name: Cache then Network Strategy (ideal for caching dynamic items like frequently updating data streams)
 // Display items from the cache as soon as possible, then reach out to the network and update with newer content (if available)
 // Gives the illusion of instantaneous load, doesn't work in offline mode
 // See `feed.js` for the 1st part of the implementation, and below for the 2nd caching the result after fetching part

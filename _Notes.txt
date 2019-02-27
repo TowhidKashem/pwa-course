@@ -10,3 +10,13 @@ IndexDB:
   - Can have multiple databases but it's typical to have one per app with as many tables as needed
 
   - Wide browser support
+
+----------------------------------------
+
+Responsive Images:
+
+These 2 HTML5 tags can be used to serve different images to different devices based on screen size:
+
+  https://www.w3schools.com/tags/tag_picture.asp
+  https://www.w3schools.com/tags/att_source_srcset.asp
+
