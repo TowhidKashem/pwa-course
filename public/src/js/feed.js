@@ -4,14 +4,13 @@ var closeCreatePostModalButton = document.querySelector(
   '#close-create-post-modal-btn'
 );
 var sharedMomentsArea = document.querySelector('#shared-moments');
-
 function closeCreatePostModal() {
   createPostArea.style.display = 'none';
 }
-
 shareImageButton.addEventListener('click', openCreatePostModal);
-
 closeCreatePostModalButton.addEventListener('click', closeCreatePostModal);
+
+//*-----------------------------------------------------------------------------------
 
 function openCreatePostModal() {
   createPostArea.style.display = 'block';
@@ -31,6 +30,13 @@ function openCreatePostModal() {
 
     defferedPrompt = null;
   }
+
+  // // Unregister all service workers programatically
+  // if ('serviceWorker' in navigator) {
+  //   navigator.serviceWorker.getRegistrations().then(registrations => {
+  //     registrations.forEach(registration => registration.unregister());
+  //   });
+  // }
 }
 
 // On Demand Caching Upon a User Event

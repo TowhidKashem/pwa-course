@@ -1,7 +1,20 @@
 // Bump these version numbers each time code for a cache is updated
-const STATIC_VERSION = 'v1';
-const DYNAMIC_VERSION = 'v1';
+const STATIC_VERSION = 'v6';
+const DYNAMIC_VERSION = 'v6';
 
+// Recursive helper function to delete items off the cache (off the top - oldest items first, you can get as fancy with this algorithm as you ike) if they are greater than a max amount
+// On this file we are setting a maxItems count of 3 which is of course very agressive, checkout current browser limits to determine a better number
+function _trimCache(cacheName, maxItems) {
+  caches.open(cacheName).then(cache => {
+    return cache.keys().then(keys => {
+      if (keys.length > maxItems) {
+        cache.delete(keys[0]).then(_trimCache(cacheName.maxItems));
+      }
+    });
+  });
+}
+
+// Install gets called once when the service worker is updated
 self.addEventListener('install', event => {
   console.log('[SW] Installing Service Worker...', event);
 
@@ -33,6 +46,7 @@ self.addEventListener('install', event => {
   );
 });
 
+// Activate gets called once when the service worker is updated
 self.addEventListener('activate', event => {
   console.log('[SW] Activating Service Worker...', event);
 
@@ -73,6 +87,9 @@ self.addEventListener('fetch', event => {
           fetch(event.request)
             .then(response => {
               return caches.open(`dynamic-${DYNAMIC_VERSION}`).then(cache => {
+                // Make sure there aren't too many items in the dynamic cache
+                // _trimCache(`dynamic-${DYNAMIC_VERSION}`, 3);
+
                 // After fetching, store in cache
                 // .put() unlike .add() doesn't make a new request, it simply adds what you already fetched to the cache
                 // Must use .clone() here because response is empty since it can only be used once, so you must return a cloned copy
@@ -85,7 +102,7 @@ self.addEventListener('fetch', event => {
               return caches.open(`static-${STATIC_VERSION}`).then(cache => {
                 // Check to see if the asset being requested is one of the page routes because it doesn't make sense to send offline message for things like
                 // unfetched css and js files, etc
-                if (event.request.url.indexOf('/help')) {
+                if (event.request.headers.get('accept').includes('text/html')) {
                   return cache.match('/offline.html');
                 }
               });
