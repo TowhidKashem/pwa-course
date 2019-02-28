@@ -187,3 +187,41 @@ self.addEventListener('fetch', event => {
 //     })
 //   );
 // });
+
+// This event is fired right away if there is an internet connection and also whenever a connection is regained after being lost
+self.addEventListener('sync', event => {
+  console.log('[SW] Background Syncing...', event);
+
+  if (event.tag === 'sync-new-posts') {
+    console.log('[SW] Doing the `sync-new-posts` Task...');
+
+    event.waitUntil(
+      readData('sync-posts').then(posts => {
+        // For each temp item in the `sync-posts` table send AJAX request to save data, then delete entry from table
+        for (let key in posts) {
+          fetch(
+            'https://us-central1-pwagram-ec297.cloudfunctions.net/storePostData',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json'
+              },
+              body: JSON.stringify(posts[key])
+            }
+          )
+            .then(response => response.json())
+            .then(response => {
+              console.log('[SW] Sent Data From Background Task:', response);
+
+              // If successful then delete the temp entry from the `sync-posts` table
+              deleteSingleItemData('sync-posts', response.id);
+
+              console.log(`[SW] Entry ID: ${response.id} Deleted From Queue!`);
+            })
+            .catch(err => console.log(err));
+        }
+      })
+    );
+  }
+});

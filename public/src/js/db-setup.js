@@ -1,8 +1,13 @@
 // `posts-store` = db, `posts` = table
 const dbPromise = idb.open('posts-store', 1, db => {
   // If table doesn't exist in current db then create it
+  // Use this table for the cache
   if (!db.objectStoreNames.contains('posts')) {
     db.createObjectStore('posts', { keyPath: 'id' }); // `keyPath` defined the primary key
+  }
+  // Use this table for temporarily storing items needed for background sync operations
+  if (!db.objectStoreNames.contains('sync-posts')) {
+    db.createObjectStore('sync-posts', { keyPath: 'id' });
   }
 });
 
