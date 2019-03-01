@@ -1,6 +1,7 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const cors = require('cors')({ origin: true });
+const webpush = require('web-push');
 
 // Create and Deploy Your First Cloud Functions
 // https://firebase.google.com/docs/functions/write-firebase-functions
@@ -26,6 +27,41 @@ exports.storePostData = functions.https.onRequest((request, response) => {
         image: request.body.image
       })
       .then(() => {
+        webpush.setVapidDetails(
+          'mailto:foo@bar.com', // your email address
+          'BLTKXRXVqFGoEIffVm3_NZYmickzGW19oEnupesF8pm0EiBPToOzkoasBRC6xOz5_mrtIl-FjvCSPeVDkf_esN0', // your public key
+          'L0yKXh-GyDvhh2aAjMfYHi0cU4djrw2BY3WgH0pTCkM' // your private key
+        );
+
+        // Get all push notification subscriptions from the database
+        return admin
+          .database()
+          .ref('subscriptions')
+          .once('value');
+      })
+      .then(subscriptions => {
+        subscriptions.forEach(sub => {
+          let pushConfig = {
+            endpoint: sub.val().endpoint,
+            keys: {
+              auth: sub.val().keys.auth.val,
+              p256dh: sub.val().keys.auth.val.p256dh
+            }
+          };
+
+          // Send notification with payload
+          // eslint-disable-next-line promise/no-nesting
+          webpush
+            .sendNotification(
+              pushConfig,
+              JSON.stringify({
+                title: 'New Post Notification',
+                content: 'New Post Added!'
+              })
+            )
+            .catch(err => console.log(err)); // Notification failed to send
+        });
+
         return response.status(201).json({
           message: 'Data Stored',
           id: request.body.id

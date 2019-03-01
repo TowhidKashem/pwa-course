@@ -1,5 +1,3 @@
-// import { Subscription } from 'rx';
-
 let defferedPrompt;
 
 if ('serviceWorker' in navigator) {
