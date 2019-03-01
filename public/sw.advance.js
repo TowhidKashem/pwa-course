@@ -2,8 +2,10 @@ importScripts('/src/js/idb.js');
 importScripts('/src/js/db-setup.js');
 
 // Bump these version numbers each time code for a cache is updated
-const STATIC_VERSION = 'v1';
-const DYNAMIC_VERSION = 'v1';
+const STATIC_VERSION = 'v2';
+const DYNAMIC_VERSION = 'v2';
+
+//* CACHING ------------------------------------------------------------------------------------------------------------------
 
 // Recursive helper function to delete items off the cache (off the top - oldest items first, you can get as fancy with this algorithm as you ike) if they are greater than a max amount
 // On this file we are setting a maxItems count of 3 which is of course very agressive, checkout current browser limits to determine a better number
@@ -188,6 +190,8 @@ self.addEventListener('fetch', event => {
 //   );
 // });
 
+//* BACKGROUND SYNC ------------------------------------------------------------------------------------------------------------------
+
 // This event is fired right away if there is an internet connection and also whenever a connection is regained after being lost
 self.addEventListener('sync', event => {
   console.log('[SW] Background Syncing...', event);
@@ -224,4 +228,25 @@ self.addEventListener('sync', event => {
       })
     );
   }
+});
+
+//* NOTIFICATIONS ------------------------------------------------------------------------------------------------------------------
+
+self.addEventListener('notificationclick', event => {
+  const notification = event.notification;
+  const action = event.action;
+
+  // `confirm` here isn't a keyword, it's just the ID we gave to one of the notification buttons inside the `displayConfirmNotification()` function
+  if (action === 'confirm') {
+    console.log('confirm was chosen');
+  } else {
+    console.log(action);
+  }
+
+  notification.close(); // Some devices do this automatically but others like android doesn't so calling it explicitly here
+});
+
+self.addEventListener('notificationclose', event => {
+  // Can send analytics data here since user didn't interact with notification
+  console.log('Notification was closed', event);
 });
