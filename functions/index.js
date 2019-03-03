@@ -56,7 +56,8 @@ exports.storePostData = functions.https.onRequest((request, response) => {
               pushConfig,
               JSON.stringify({
                 title: 'New Post Notification',
-                content: 'New Post Added!'
+                content: 'New Post Added!',
+                openUrl: '/help' // Can be called anything, `openUrl` isn't a keyword
               })
             )
             .catch(err => console.log(err)); // Notification failed to send

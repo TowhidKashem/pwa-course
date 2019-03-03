@@ -50,7 +50,11 @@ form.addEventListener('submit', e => {
   };
 
   // If a post was submitted when there was no internet connection, queue it for later sync
-  if ('serviceWorker' in navigator && 'SyncManager' in window) {
+  if (
+    !navigator.onLine &&
+    'serviceWorker' in navigator &&
+    'SyncManager' in window
+  ) {
     navigator.serviceWorker.ready.then(sw => {
       // Write to IndexedDB so when the task starts it knows where to get data from
       writeData('sync-posts', post).then(() => {

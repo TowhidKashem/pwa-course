@@ -2,8 +2,8 @@ importScripts('/src/js/idb.js');
 importScripts('/src/js/db-setup.js');
 
 // Bump these version numbers each time code for a cache is updated
-const STATIC_VERSION = 'v2';
-const DYNAMIC_VERSION = 'v2';
+const STATIC_VERSION = 'v100';
+const DYNAMIC_VERSION = 'v100';
 
 //* CACHING ------------------------------------------------------------------------------------------------------------------
 
@@ -239,14 +239,50 @@ self.addEventListener('notificationclick', event => {
   // `confirm` here isn't a keyword, it's just the ID we gave to one of the notification buttons inside the `displayConfirmNotification()` function
   if (action === 'confirm') {
     console.log('confirm was chosen');
+    notification.close(); // Some devices do this automatically but others like android doesn't so calling it explicitly here
   } else {
     console.log(action);
-  }
+    // If user clicks on the notification and user had a tab open to the site open the link there, otherwise open it in a new tab
+    event.waitUntil(
+      clients.matchAll().then(clients => {
+        const client = clients.find(c => c.visibilityState === 'visible');
 
-  notification.close(); // Some devices do this automatically but others like android doesn't so calling it explicitly here
+        if (client !== undefined) {
+          client.navigate(notification.data.openUrl);
+          client.focus();
+        } else {
+          clients.openWindow(notification.data.openUrl);
+        }
+
+        notification.close();
+      })
+    );
+  }
 });
 
 self.addEventListener('notificationclose', event => {
   // Can send analytics data here since user didn't interact with notification
   console.log('Notification was closed', event);
+});
+
+// Will fire whenever a new push message is sent
+self.addEventListener('push', event => {
+  console.log('[SW] Push Notification Recieved!');
+  alert('[SW] Push Notification Recieved!');
+
+  let data = {};
+  if (event.data) {
+    data = JSON.parse(event.data.text()); // The notification is sent from the server, see "./functions/index.js"
+  }
+
+  const options = {
+    body: 'You successfully subscribed to our notification service!',
+    icon: '/src/images/icons/app-icon-96x96.png',
+    badge: '/src/images/icons/app-icon-96x96.png',
+    data: {
+      openUrl: data.openUrl
+    }
+  };
+
+  event.waitUntil(self.registration.showNotification(data.title, options));
 });
