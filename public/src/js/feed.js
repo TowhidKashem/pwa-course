@@ -11,6 +11,12 @@ function closeCreatePostModal() {
   imagePickerContainer.style.display = 'none';
   videoPlayer.style.display = 'none';
   canvasElement.style.display = 'none';
+  locationBtn.style.display = 'inline';
+  locationLoader.style.display = 'none';
+  // Turn off camera
+  if (videoPlayer.srcObject) {
+    videoPlayer.srcObject.getVideoTracks().forEach(track => track.stop());
+  }
 }
 
 shareImageButton.addEventListener('click', openCreatePostModal);
@@ -27,9 +33,14 @@ const imagePicker = document.querySelector('#image-picker');
 const imagePickerContainer = document.querySelector('#pick-image');
 let myPicture;
 
-//*---------------- Notifications ----------------*//
+const locationBtn = document.querySelector('#location-btn');
+const locationLoader = document.querySelector('#location-loader');
+let fetchedLocation;
 
-// [Native Feature]: Camera Access
+//*---------------- Native Features ----------------*//
+
+//*------------ Camera Access
+
 function intializeMedia() {
   // Polyfill for older browsers/devices that don't support `getUserMedia()`
   // May not be nessecary since the latest versions of Android Chrome and IOS Safari both do
@@ -93,6 +104,51 @@ function intializeMedia() {
   });
 }
 
+//*------------ Geo Location
+
+function intializeGeoLocation() {
+  if (!('geolocation' in navigator)) {
+    locationBtn.style.display = 'none';
+  }
+}
+
+locationBtn.addEventListener('click', event => {
+  if (!('geolocation' in navigator)) {
+    return;
+  }
+
+  locationBtn.style.display = 'none';
+  locationLoader.style.display = 'block';
+
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      // Re-enable btn
+      locationBtn.style.display = 'inline';
+      locationLoader.style.display = 'none';
+
+      fetchedLocation = {
+        lat: position.coords.latitude,
+        lng: 0
+      };
+
+      locationInput.value = `In NYC: ${fetchedLocation.lat}`;
+      document.querySelector('#manual-location').classList.add('is-focused');
+    },
+    err => {
+      console.log(err);
+      locationBtn.style.display = 'inline';
+      locationLoader.style.display = 'none';
+
+      fetchedLocation = { lat: null, lng: null };
+
+      alert("Couldn't fetch location, please enter manually!");
+    },
+    {
+      timeout: 7000
+    }
+  );
+});
+
 //*------------------------------------------------------------------------
 
 function sendData(post) {
@@ -100,6 +156,8 @@ function sendData(post) {
   postData.append('id', post.id);
   postData.append('title', post.title);
   postData.append('location', post.location);
+  postData.append('rawLocationLat', fetchedLocation.lat);
+  postData.append('rawLocationLng', fetchedLocation.lng);
   postData.append('file', myPicture, `${post.id}.png`); // 3rd param allows you to override the name of the image
 
   fetch('https://us-central1-pwagram-ec297.cloudfunctions.net/storePostData', {
@@ -128,7 +186,8 @@ form.addEventListener('submit', e => {
     id: new Date().toISOString(),
     title: titleInput.value,
     location: locationInput.value,
-    image: myPicture
+    image: myPicture,
+    rawLocation: fetchedLocation
   };
 
   // If a post was submitted when there was no internet connection, queue it for later sync
@@ -168,6 +227,7 @@ function openCreatePostModal() {
   createPostArea.style.transform = 'translateY(0)';
 
   intializeMedia();
+  intializeGeoLocation();
 
   // // Show deffered add to home screen at a custom time example
   // if (defferedPrompt) {

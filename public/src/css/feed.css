@@ -50,7 +50,8 @@
   margin: auto;
 }
 
-#create-post #pick-image {
+#create-post #pick-image,
+#create-post #location-loader {
   display: none;
 }
 

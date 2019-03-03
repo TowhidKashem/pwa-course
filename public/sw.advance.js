@@ -208,6 +208,8 @@ self.addEventListener('sync', event => {
           postData.append('id', posts[key].id);
           postData.append('title', posts[key].title);
           postData.append('location', posts[key].location);
+          postData.append('rawLocationLat', posts[key].lat);
+          postData.append('rawLocationLng', posts[key].lng);
           postData.append('file', posts[key].picture, `${posts[key].id}.png`); // 3rd param allows you to override the name of the image
 
           fetch(
