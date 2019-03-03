@@ -4,9 +4,15 @@ var closeCreatePostModalButton = document.querySelector(
   '#close-create-post-modal-btn'
 );
 var sharedMomentsArea = document.querySelector('#shared-moments');
+
 function closeCreatePostModal() {
+  // Clean up
   createPostArea.style.transform = 'translateY(100vh)';
+  imagePickerContainer.style.display = 'none';
+  videoPlayer.style.display = 'none';
+  canvasElement.style.display = 'none';
 }
+
 shareImageButton.addEventListener('click', openCreatePostModal);
 closeCreatePostModalButton.addEventListener('click', closeCreatePostModal);
 
@@ -14,14 +20,91 @@ const form = document.querySelector('form');
 const titleInput = document.querySelector('#title');
 const locationInput = document.querySelector('#location');
 
+const videoPlayer = document.querySelector('#player');
+const canvasElement = document.querySelector('#canvas');
+const captureBtn = document.querySelector('#capture-btn');
+const imagePicker = document.querySelector('#image-picker');
+const imagePickerContainer = document.querySelector('#pick-image');
+let myPicture;
+
+//*---------------- Notifications ----------------*//
+
+// [Native Feature]: Camera Access
+function intializeMedia() {
+  // Polyfill for older browsers/devices that don't support `getUserMedia()`
+  // May not be nessecary since the latest versions of Android Chrome and IOS Safari both do
+  if (!('mediaDevices' in navigator)) {
+    navigator.mediaDevices = {};
+  }
+  if (!('getUserMedia' in navigator.mediaDevices)) {
+    navigator.mediaDevices.getUserMedia = constraints => {
+      const getUserMedia =
+        navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+
+      if (!getUserMedia) {
+        return Promise.reject(new Error('getUserMedia() is not implemented!'));
+      }
+
+      return new Promise((resolve, reject) => {
+        getUserMedia.call(navigator, constraints, resolve, reject);
+      });
+    };
+  }
+
+  // Ask for permission then display stream to canvas
+  navigator.mediaDevices
+    .getUserMedia({
+      video: true
+      // audio: true
+    })
+    .then(stream => {
+      videoPlayer.srcObject = stream;
+      videoPlayer.style.display = 'block';
+    })
+    .catch(err => {
+      // Show manual file uploader fallback (progressive enhancement)
+      imagePickerContainer.style.display = 'block';
+    });
+
+  // Take pic from webcam
+  captureBtn.addEventListener('click', event => {
+    canvasElement.style.display = 'block';
+    videoPlayer.style.display = 'none';
+    captureBtn.style.display = 'none';
+
+    const context = canvasElement.getContext('2d');
+    context.drawImage(
+      videoPlayer,
+      0,
+      0,
+      canvasElement.width,
+      videoPlayer.videoHeight / (videoPlayer.videoWidth / canvasElement.width)
+    );
+
+    // Stop the webcam after the pic is taken, just hiding it won't get rid of the light on the webcam indicating it's stil running
+    videoPlayer.srcObject.getVideoTracks().forEach(track => track.stop());
+
+    myPicture = _dataURItoBlob(canvasElement.toDataURL());
+
+    // File uploader fallback
+    imagePicker.addEventListener('change', event => {
+      picture = event.target.files[0];
+    });
+  });
+}
+
+//*------------------------------------------------------------------------
+
 function sendData(post) {
+  const postData = new FormData();
+  postData.append('id', post.id);
+  postData.append('title', post.title);
+  postData.append('location', post.location);
+  postData.append('file', myPicture, `${post.id}.png`); // 3rd param allows you to override the name of the image
+
   fetch('https://us-central1-pwagram-ec297.cloudfunctions.net/storePostData', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
-    body: JSON.stringify(post)
+    body: postData
   }).then(response => {
     console.log('Sent Data:', response);
     fetchPosts();
@@ -45,8 +128,7 @@ form.addEventListener('submit', e => {
     id: new Date().toISOString(),
     title: titleInput.value,
     location: locationInput.value,
-    image:
-      'https://www.catster.com/wp-content/uploads/2017/08/A-fluffy-cat-looking-funny-surprised-or-concerned.jpg'
+    image: myPicture
   };
 
   // If a post was submitted when there was no internet connection, queue it for later sync
@@ -85,21 +167,24 @@ form.addEventListener('submit', e => {
 function openCreatePostModal() {
   createPostArea.style.transform = 'translateY(0)';
 
-  if (defferedPrompt) {
-    defferedPrompt.prompt();
+  intializeMedia();
 
-    defferedPrompt.userChoice.then(choiceResult => {
-      console.log(choiceResult.outcome);
+  // // Show deffered add to home screen at a custom time example
+  // if (defferedPrompt) {
+  //   defferedPrompt.prompt();
 
-      if (choiceResult.outcome === 'dismissed') {
-        console.log('User cancelled installation');
-      } else {
-        console.log('User added to homescreen');
-      }
-    });
+  //   defferedPrompt.userChoice.then(choiceResult => {
+  //     console.log(choiceResult.outcome);
 
-    defferedPrompt = null;
-  }
+  //     if (choiceResult.outcome === 'dismissed') {
+  //       console.log('User cancelled installation');
+  //     } else {
+  //       console.log('User added to homescreen');
+  //     }
+  //   });
+
+  //   defferedPrompt = null;
+  // }
 
   // // Unregister all service workers programatically
   // if ('serviceWorker' in navigator) {

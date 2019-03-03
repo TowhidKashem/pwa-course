@@ -36,6 +36,7 @@ self.addEventListener('install', event => {
         // JS
         '/src/js/app.js',
         '/src/js/feed.js',
+        '/src/js/utility-functions.js',
         '/src/js/material.min.js',
         '/src/js/idb.js',
         // CSS
@@ -203,15 +204,17 @@ self.addEventListener('sync', event => {
       readData('sync-posts').then(posts => {
         // For each temp item in the `sync-posts` table send AJAX request to save data, then delete entry from table
         for (let key in posts) {
+          const postData = new FormData();
+          postData.append('id', posts[key].id);
+          postData.append('title', posts[key].title);
+          postData.append('location', posts[key].location);
+          postData.append('file', posts[key].picture, `${posts[key].id}.png`); // 3rd param allows you to override the name of the image
+
           fetch(
             'https://us-central1-pwagram-ec297.cloudfunctions.net/storePostData',
             {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json'
-              },
-              body: JSON.stringify(posts[key])
+              body: postData
             }
           )
             .then(response => response.json())
@@ -230,7 +233,7 @@ self.addEventListener('sync', event => {
   }
 });
 
-//* NOTIFICATIONS ------------------------------------------------------------------------------------------------------------------
+//* PUSH NOTIFICATIONS ------------------------------------------------------------------------------------------------------------------
 
 self.addEventListener('notificationclick', event => {
   const notification = event.notification;
